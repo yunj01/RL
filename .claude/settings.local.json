@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import pdfplumber; pdf = pdfplumber.open\\('Instruction.pdf'\\); [print\\(p.extract_text\\(\\)\\) for p in pdf.pages]\")",
+      "Bash(python -c \"import PyPDF2; r = PyPDF2.PdfReader\\('Instruction.pdf'\\); [print\\(r.pages[i].extract_text\\(\\)\\) for i in range\\(len\\(r.pages\\)\\)]\")",
+      "Bash(pip install:*)",
+      "Bash(python -c ':*)",
+      "Bash(conda create:*)",
+      "Bash(conda run:*)",
+      "Bash(tasklist)",
+      "Bash(taskkill /PID 35444 /F)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(C:/Users/tuni1/miniconda3/envs/rl_assign2/python.exe -u \"C:/Users/tuni1/Desktop/RL/Assignment2/Lunarlander_RF.py\")",
+      "Bash(start /B \"C:/Users/tuni1/Desktop/RL/Assignment2/run_train.bat\")"
+    ]
+  }
+}
