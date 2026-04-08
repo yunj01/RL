@@ -35,18 +35,17 @@ class PolicyNetwork(nn.Module):
         super(PolicyNetwork, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.Tanh(),
+            nn.ReLU(),
         )
         self.mean_head = nn.Linear(hidden_dim, action_dim)
-        # log_std는 state에 무관한 독립 파라미터로 학습
-        self.log_std = nn.Parameter(torch.zeros(action_dim))
+        # log_std 초기값을 -0.5 정도로 설정하여 초기 탐색 확보
+        self.log_std = nn.Parameter(torch.full((action_dim,), -0.5))
 
     def forward(self, state):
         x = self.net(state)
         mean = torch.tanh(self.mean_head(x))   # action 범위 [-1, 1]에 맞춤
-        # log_std를 [-20, 2]로 클램핑 → std가 폭발하거나 0이 되는 것 방지
         std = self.log_std.clamp(-20, 2).exp().expand_as(mean)
         return mean, std
 
@@ -76,9 +75,9 @@ class ValueNetwork(nn.Module):
         super(ValueNetwork, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(hidden_dim, 1),
         )
 
@@ -120,13 +119,14 @@ def train(env, M):
     GAMMA          = 0.99
     LAM            = 0.95       # GAE λ
     ACTOR_LR       = 3e-4
-    CRITIC_LR      = 3e-4
-    CRITIC_ITERS   = 10         # 배치당 critic 업데이트 횟수
-    ENTROPY_START  = 0.02       # 탐색 (너무 높으면 200점 도달이 늦어짐)
-    ENTROPY_END    = 0.001
+    CRITIC_LR      = 1e-3       # Critic이 조금 더 빨리 따라오도록 학습률 상향
+    CRITIC_ITERS   = 20         # 배치당 critic 업데이트 횟수 증가
+    ENTROPY_START  = 0.05       # 초기 탐색 강화
+    ENTROPY_END    = 0.005
     SOLVE_SCORE    = 200.0
-    N_BATCH        = 4          # 4개 에피소드마다 업데이트
-    REWARD_SCALE   = 0.05       # 보상 스케일링 (안정적 수렴용)
+    N_BATCH        = 8          # 배치를 조금 더 크게 하여 안정성 강화
+    REWARD_SCALE   = 0.01       # 보상 스케일링을 조금 더 작게 조정
+
 
     # Networks & optimizers
     policy = PolicyNetwork(state_dim, action_dim)
