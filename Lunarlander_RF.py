@@ -129,7 +129,7 @@ def train(env, M):
 
     if os.path.exists("best_policy_old.pth"):
         try:
-            ckpt = torch.load("best_policy_old.pth", map_location='cpu')
+            ckpt = torch.load("best_policy_old.pth", map_location='cpu', weights_only=False)
             if isinstance(ckpt, dict) and 'policy' in ckpt:
                 policy.load_state_dict(ckpt['policy'])
                 if 'value' in ckpt:
