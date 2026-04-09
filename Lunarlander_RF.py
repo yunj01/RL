@@ -157,6 +157,8 @@ def train(env, M):
     )
 
     ep_rewards = []
+    policy_losses = []
+    value_losses = []
     best_avg_reward = -float('inf')
     episode = 0
     update_count = 0
@@ -242,6 +244,7 @@ def train(env, M):
         actor_scheduler.step()
 
         # --- Critic update: fit baseline to returns ---
+        final_value_loss = 0.0
         for _ in range(CRITIC_ITERS):
             v_pred = value(all_states)
             value_loss = nn.functional.huber_loss(v_pred, all_returns)
@@ -249,12 +252,15 @@ def train(env, M):
             value_loss.backward()
             nn.utils.clip_grad_norm_(value.parameters(), MAX_GRAD_NORM)
             critic_optimizer.step()
+            final_value_loss = value_loss.item()
         critic_scheduler.step()
 
         update_count += 1
 
         for r_sum in batch_ep_rewards:
             ep_rewards.append(r_sum)
+            policy_losses.append(policy_loss.item())
+            value_losses.append(final_value_loss)
             avg100 = np.mean(ep_rewards[-100:]) if len(ep_rewards) >= 100 else np.mean(ep_rewards)
             print(f"Episode {len(ep_rewards):4d} | Reward: {r_sum:8.2f} | Avg100: {avg100:8.2f}", flush=True)
             if len(ep_rewards) >= 100 and avg100 > best_avg_reward:
@@ -268,14 +274,14 @@ def train(env, M):
                 }, "best_policy.pth")
 
         if len(ep_rewards) % 200 == 0:
-            save_training_graph(ep_rewards)
+            save_training_graph(ep_rewards, policy_losses, value_losses)
 
         if len(ep_rewards) >= 100 and np.mean(ep_rewards[-100:]) >= SOLVE_SCORE:
             print(f"  [Solved at episode {len(ep_rewards)}] Avg100: {np.mean(ep_rewards[-100:]):.2f}", flush=True)
             record_video(policy, state_rms)
             break
 
-    save_training_graph(ep_rewards)
+    save_training_graph(ep_rewards, policy_losses, value_losses)
     env.close()
     return policy, value
 
@@ -298,24 +304,40 @@ def record_video(policy, state_rms):
     print(f"  [Video saved] reward: {total_reward:.2f}")
 
 
-def save_training_graph(rewards):
-    plt.figure(figsize=(10, 5))
-    plt.plot(rewards, alpha=0.3, color='steelblue', label='Reward')
+def save_training_graph(rewards, p_losses, v_losses):
+    fig, axs = plt.subplots(3, 1, figsize=(10, 12))
+    
+    # 1. Reward plot
+    axs[0].plot(rewards, alpha=0.3, color='steelblue', label='Reward')
     if len(rewards) >= 50:
         window = 50
         ma = np.convolve(rewards, np.ones(window)/window, mode='valid')
-        plt.plot(range(window-1, len(rewards)), ma, color='steelblue', linewidth=2, label=f'MA-{window}')
-    plt.axhline(y=200, color='red', linestyle='--', label='Target (200)')
-    plt.ylabel('Reward')
-    plt.xlabel('Episode')
-    plt.legend()
-    plt.grid(True)
+        axs[0].plot(range(window-1, len(rewards)), ma, color='steelblue', linewidth=2, label=f'MA-{window}')
+    axs[0].axhline(y=200, color='red', linestyle='--', label='Target (200)')
+    axs[0].set_ylabel('Reward')
+    axs[0].legend()
+    axs[0].grid(True)
+
+    # 2. Policy Loss plot
+    axs[1].plot(p_losses, color='orange', label='Policy Loss')
+    axs[1].set_ylabel('Policy Loss')
+    axs[1].legend()
+    axs[1].grid(True)
+
+    # 3. Value Loss plot
+    axs[2].plot(v_losses, color='green', label='Value Loss')
+    axs[2].set_ylabel('Value Loss')
+    axs[2].set_xlabel('Episode')
+    axs[2].legend()
+    axs[2].grid(True)
+
+    plt.tight_layout()
     plt.savefig('training_log.png', dpi=150)
     plt.close()
 
 
 def main():
-    MAX_EPISODES = 5000
+    MAX_EPISODES = 2500
     env = gym.make("LunarLander-v3", continuous=True, render_mode='rgb_array')
     os.makedirs("videos", exist_ok=True)
     train(env, MAX_EPISODES)

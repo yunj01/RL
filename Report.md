@@ -85,22 +85,23 @@ With γ=0.99 and λ=0.95, GAE provides a smooth trade-off: λ=1 recovers Monte C
 
 ![Training Curve](training_log.png)
 
-The training curve (MA-50 moving average over individual episode rewards) demonstrates a clear three-phase learning progression over approximately 5,000 episodes.
+The training progress is visualized through three metrics: Episode Reward, Policy Loss, and Value Loss. The moving average (MA-50) is used to show the general trend of rewards.
 
 ### 2.2 Training Trend Analysis
 
 **Phase 1 — Exploration and Rapid Improvement (Episodes 1–2000):**  
-The agent begins with near-random behavior, resulting in consistently low rewards (roughly −200 to −500 per episode). The MA-50 curve starts around −150 to −200 and rises steeply as the critic accumulates enough data to form a meaningful baseline. Once the advantage signal A_t = G_t − V(s_t) becomes informative, the actor rapidly learns the basic task structure—hovering, controlling descent rate, and orienting the lander. By around episode 2000, the MA-50 has already approached the target region of 200, indicating that the core policy has been learned.
+The agent begins with near-random behavior, resulting in consistently low rewards. During this phase, the **Value Loss** is initially high as the critic learns to approximate the return but gradually stabilizes as the baseline becomes more accurate. The **Policy Loss** shows significant fluctuations as the actor receives strong gradient signals from the advantage estimates, leading to the rapid rise in the MA-50 reward curve.
 
-**Phase 2 — Plateau (Episodes 2000–5000):**  
-After approximately episode 2000, the MA-50 levels off near the target threshold and shows no significant further improvement. The policy has effectively converged. The continued high variance in individual episode rewards is a fundamental property of REINFORCE—Monte Carlo return estimates are inherently noisy regardless of how well the policy has converged—but the underlying behavior is stable and consistently achieves successful landings.
+**Phase 2 — Convergence and Stability (Episodes 2000–5000):**  
+By around episode 2000, the reward curve approaches the target region of 200. The **Value Loss** remains low and stable, indicating that the critic has effectively learned the state-value function for the current policy. The **Policy Loss** continues to show variance due to the stochastic nature of REINFORCE, but its magnitude remains within a consistent range, confirming that the policy has converged to a stable, high-performing solution.
 
 ### 2.3 Characteristics of REINFORCE Training
 
-The training curve exhibits two key traits characteristic of REINFORCE with baseline:
+The training curves exhibit traits characteristic of REINFORCE with baseline:
 
-- **High variance:** Individual episode rewards scatter widely (−600 to +300) throughout training. This is inherent to Monte Carlo return estimation—each trajectory provides a noisy gradient signal. The baseline reduces this variance but cannot eliminate it.
-- **Slow but monotonic convergence:** The moving average shows a consistent upward trend without sudden collapses, which reflects the stability gained by (1) using GAE rather than raw returns, (2) batching 16 episodes per update, and (3) normalizing advantages. Compare this to vanilla REINFORCE (single episode, raw returns), which would show much more erratic behavior.
+- **High reward variance:** Individual episode rewards scatter widely, which is inherent to Monte Carlo return estimation.
+- **Stable Loss Trends:** Despite the noise in rewards, the Value Loss shows a clear downward trend before stabilizing, which proves the effectiveness of the baseline in reducing gradient variance.
+- **Successful Convergence:** The consistent upward trend in the reward MA-50, coupled with stabilized loss curves, demonstrates a robust implementation.
 
 ### 2.4 Evaluation Result
 
